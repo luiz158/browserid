@@ -5,7 +5,7 @@ import os
 import platform
 import subprocess
 import sys
-
+import glob
 
 # used to check for existence of virtualenv and pip.
 # lifted from: http://stackoverflow.com/questions/377017
@@ -22,7 +22,6 @@ def which(program):
             if is_exe(exe_file):
                 return exe_file
     return None
-
 
 def main():
     # virtualenv location differs on windows
@@ -44,7 +43,8 @@ def main():
                       default="dev", help='run tests against an ephemeral' +
                       ' instance. Specify your instance\'s hostname ("foo"),' +
                       ' not the full domain name ("foo.123done.org")')
-    # TODO add other options
+    parser.add_option('--list', '-l', dest='list', action="store_true",
+                      help='list available tests')
     options, arguments = parser.parse_args()
 
     # 1. check that python is the right version TODO: would 2.6 actually work?
@@ -60,6 +60,24 @@ def main():
         sys.stderr.write('virtualenv must be installed; do "pip install ' +
                          'virtualenv", then try again\n')
         exit(1)
+
+    # 2.5 handle the list command
+    if options.list:
+        tests = glob.glob('123done/tests/*.py')
+        tests += glob.glob('browserid/tests/*.py')
+        tests += glob.glob('myfavoritebeer/tests/*.py')
+        def filterNonTest(test):
+            return test.endswith('.py') and \
+                   not test.endswith('__init__.py') and \
+                   not test.endswith('base.py')
+
+        tests = filter(filterNonTest, tests)
+
+        sys.stdout.write(str(len(tests)) + " available tests:\n")
+        for test in tests:
+            sys.stdout.write("    " + test + "\n")
+        exit(0)
+
     # 3. create the virtualenv if they asked you to install it or it's missing
     if options.install or not os.path.exists(env_py):
         subprocess.call('virtualenv bid_selenium', shell=True)
